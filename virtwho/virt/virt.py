@@ -27,7 +27,6 @@ from multiprocessing import Process, Event
 import json
 import hashlib
 import signal
-import re
 
 try:
     from collections import OrderedDict
@@ -219,29 +218,19 @@ class HostGuestAssociationReport(AbstractVirtReport):
     def __repr__(self):
         return 'HostGuestAssociationReport({0.config!r}, {0._assoc!r}, {0.state!r})'.format(self)
 
-    def _filter(self,host,filterlist):
-        for i in filterlist:
-            if re.search(i,host):
-                # match is found
-                return 0
-        # no match
-        return 1
-
     @property
     def association(self):
         # Apply filter
         logger = logging.getLogger("virtwho")
         assoc = []
         for host in self._assoc['hypervisors']:
-            if self._config.exclude_hosts is not None:
-                if self._filter(host.hypervisorId,self._config.exclude_hosts) == 0:
-                    logger.debug("Skipping host '%s' because its uuid is excluded", host.hypervisorId)
-                    continue 
+            if self._config.exclude_hosts is not None and host.hypervisorId in self._config.exclude_hosts:
+                logger.debug("Skipping host '%s' because its uuid is excluded", host.hypervisorId)
+                continue
 
-            if self._config.filter_hosts is not None:
-                if self._filter(host.hypervisorId,self._config.filter_hosts) != 0:
-                    logger.debug("Skipping host '%s' because its uuid is filterd", host.hypervisorId)
-                    continue 
+            if self._config.filter_hosts is not None and host.hypervisorId not in self._config.filter_hosts:
+                logger.debug("Skipping host '%s' because its uuid is not included", host.hypervisorId)
+                continue
             assoc.append(host)
         return {'hypervisors': assoc}
 
